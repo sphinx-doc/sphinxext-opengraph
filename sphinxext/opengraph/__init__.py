@@ -253,15 +253,10 @@ def ambient_site_url() -> str:
     # readthedocs addons sets the READTHEDOCS_CANONICAL_URL variable,
     # or defines the ``html_baseurl`` variable in conf.py
     if rtd_canonical_url := os.getenv('READTHEDOCS_CANONICAL_URL'):
-        parse_result = urlsplit(rtd_canonical_url)
+        return rtd_canonical_url
     else:
         msg = 'ReadTheDocs did not provide a valid canonical URL!'
         raise RuntimeError(msg)
-
-    # Grab root url from canonical url
-    return urlunsplit(
-        (parse_result.scheme, parse_result.netloc, parse_result.path, '', '')
-    )
 
 
 def social_card_for_page(
