@@ -62,8 +62,6 @@ intersphinx_mapping = {
 
 # -- Configuration for this theme --------------------------------------------
 
-ogp_site_url = 'https://sphinxext-opengraph.readthedocs.io/en/latest/'
-
 # Configuration for testing but generally we use the defaults
 # Uncomment lines to see their effect.
 ogp_social_cards = {
