@@ -60,7 +60,7 @@ def html_page_context(
     context: dict[str, Any],
     doctree: nodes.document,
 ) -> None:
-    if doctree:
+    if doctree and not app.builder.embedded:
         context['metatags'] += get_tags(
             context,
             doctree,
