@@ -250,8 +250,7 @@ def get_tags(
 
 
 def ambient_site_url() -> str:
-    # readthedocs addons sets the READTHEDOCS_CANONICAL_URL variable,
-    # or defines the ``html_baseurl`` variable in conf.py
+    # readthedocs addons sets the READTHEDOCS_CANONICAL_URL variable
     if rtd_canonical_url := os.getenv('READTHEDOCS_CANONICAL_URL'):
         parse_result = urlsplit(rtd_canonical_url)
     else:

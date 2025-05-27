@@ -305,7 +305,7 @@ def test_rtd_override(app: Sphinx, monkeypatch):
 @pytest.mark.sphinx('html', testroot='rtd-default')
 def test_rtd_valid(app: Sphinx, monkeypatch):
     monkeypatch.setenv('READTHEDOCS', 'True')
-    app.config.html_baseurl = 'https://failure.com/en/latest/'
+    monkeypatch.setenv('READTHEDOCS_CANONICAL_URL', 'https://failure.com/en/latest/')
 
     app.build()
     tags = conftest._og_meta_tags(app)
