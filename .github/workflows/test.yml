@@ -1,0 +1,90 @@
+name: Tests
+
+on:
+  push:
+    paths:
+      - ".github/workflows/test.yml"
+      - "sphinxext/**"
+      - "tests/**"
+  pull_request:
+    paths:
+      - ".github/workflows/test.yml"
+      - "sphinxext/**"
+      - "tests/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+env:
+  FORCE_COLOR: "1"
+  PYTHONDEVMODE: "1"  # -X dev
+  PYTHONWARNDEFAULTENCODING: "1"  # -X warn_default_encoding
+  UV_SYSTEM_PYTHON: "1"  # make uv do global installs
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.os }} (Python ${{ matrix.python }}; Sphinx ${{ matrix.sphinx-version }})
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+        - "ubuntu-latest"
+        python:
+        - "3.9"
+        - "3.10"
+        - "3.11"
+        - "3.12"
+        - "3.13"
+        - "3.13t"
+        sphinx-version:
+        - "6"
+        - "7"
+        - "8"
+        exclude:
+        - python: "3.9"
+          sphinx-version: "8"
+        include:
+        - python: "3.13"
+          sphinx-version: "8"
+          os: "windows-latest"
+        - python: "3.13"
+          sphinx-version: "8"
+          os: "macos-latest"
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
+    - name: Set up Python ${{ matrix.python }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python }}
+    - name: Check Python version
+      run: python --version --version
+    - name: Export UV_PYTHON
+      run: echo "UV_PYTHON=$(which python)" >> $GITHUB_ENV
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
+      with:
+        version: latest
+        enable-cache: false
+    - name: Install dependencies
+      run: uv pip install . --group test
+    - name: Install Sphinx ${{ matrix.sphinx-version }}
+      run: uv pip install --upgrade "Sphinx~=${{ matrix.sphinx-version }}.0"
+    - name: Test with pytest
+      run: python -m pytest -vv
+      env:
+        PYTHONWARNINGS: "error,ignore::DeprecationWarning:sphinx.builders.gettext"  # treat all warnings as errors
+    - name: Install social-cards extra
+      run: uv pip install .[social-cards]
+    - name: Test with pytest (social-cards)
+      run: python -m pytest -vv
+      env:
+        PYTHONWARNINGS: "error,ignore::EncodingWarning:matplotlib.font_manager,ignore::DeprecationWarning:sphinx.builders.gettext"  # treat all warnings as errors

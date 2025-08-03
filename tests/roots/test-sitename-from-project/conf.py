@@ -1,9 +1,11 @@
-extensions = ["sphinxext.opengraph"]
+from __future__ import annotations
 
-project = "Project name"
-master_doc = "index"
-exclude_patterns = ["_build"]
+extensions = ['sphinxext.opengraph']
 
-html_theme = "basic"
+project = 'Project name'
+master_doc = 'index'
+exclude_patterns = ['_build']
 
-ogp_site_url = "http://example.org/en/latest/"
+html_theme = 'basic'
+
+ogp_site_url = 'http://example.org/en/latest/'

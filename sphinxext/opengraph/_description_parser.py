@@ -1,38 +1,39 @@
+from __future__ import annotations
+
 import html
 import string
-from typing import Iterable
+from typing import TYPE_CHECKING
 
-import docutils.nodes as nodes
+from docutils import nodes
+
+if TYPE_CHECKING:
+    from collections.abc import Set
+
+
+def get_description(
+    doctree: nodes.document,
+    description_length: int,
+    known_titles: Set[str] = frozenset(),
+) -> str:
+    mcv = DescriptionParser(
+        doctree, desc_len=description_length, known_titles=known_titles
+    )
+    doctree.walkabout(mcv)
+    return mcv.description
 
 
 class DescriptionParser(nodes.NodeVisitor):
-    """
-    Finds the title and creates a description from a doctree
-    """
+    """Finds the title and creates a description from a doctree."""
 
     def __init__(
         self,
+        document: nodes.document,
+        *,
         desc_len: int,
-        known_titles: Iterable[str] = None,
-        document: nodes.document = None,
-    ):
-        # Hack to prevent requirement for the doctree to be passed in.
-        # It's only used by doctree.walk(...) to print debug messages.
-        if document is None:
-
-            class document_cls:
-                class reporter:
-                    @staticmethod
-                    def debug(*args, **kwaargs):
-                        pass
-
-            document = document_cls()
-
-        if known_titles == None:
-            known_titles = []
-
+        known_titles: Set[str] = frozenset(),
+    ) -> None:
         super().__init__(document)
-        self.description = ""
+        self.description = ''
         self.desc_len = desc_len
         self.list_level = 0
         self.known_titles = known_titles
@@ -46,19 +47,15 @@ class DescriptionParser(nodes.NodeVisitor):
         if self.stop:
             raise nodes.StopTraversal
 
-        # Skip comments
-        if isinstance(node, nodes.Invisible):
-            raise nodes.SkipNode
-
-        # Skip all admonitions
-        if isinstance(node, nodes.Admonition):
+        # Skip comments & all admonitions
+        if isinstance(node, (nodes.Admonition, nodes.Invisible)):
             raise nodes.SkipNode
 
         # Mark start of nested lists
         if isinstance(node, nodes.Sequential):
             self.list_level += 1
             if self.list_level > 1:
-                self.description += "-"
+                self.description += '-'
 
         # Skip the first title if it's the title of the page
         if not self.first_title_found and isinstance(node, nodes.title):
@@ -71,14 +68,14 @@ class DescriptionParser(nodes.NodeVisitor):
 
         # Only include leaf nodes in the description
         if len(node.children) == 0:
-            text = node.astext().replace("\r", "").replace("\n", " ").strip()
+            text = node.astext().replace('\r', '').replace('\n', ' ').strip()
 
             # Ensure string contains HTML-safe characters
             text = html.escape(text, quote=True)
 
             # Remove double spaces
-            while text.find("  ") != -1:
-                text = text.replace("  ", " ")
+            while text.find('  ') != -1:
+                text = text.replace('  ', ' ')
 
             # Put a space between elements if one does not already exist.
             if (
@@ -87,41 +84,30 @@ class DescriptionParser(nodes.NodeVisitor):
                 and self.description[-1] not in string.whitespace
                 and text[0] not in string.whitespace + string.punctuation
             ):
-                self.description += " "
+                self.description += ' '
 
             self.description += text
 
     def dispatch_departure(self, node: nodes.Element) -> None:
         # Separate title from text
         if isinstance(node, nodes.title):
-            self.description += ":"
+            self.description += ':'
 
         # Separate list elements
         if isinstance(node, nodes.Part):
-            self.description += ","
+            self.description += ','
 
         # Separate end of list from text
         if isinstance(node, nodes.Sequential):
-            if self.description and self.description[-1] == ",":
+            if self.description and self.description[-1] == ',':
                 self.description = self.description[:-1]
-            self.description += "."
+            self.description += '.'
             self.list_level -= 1
 
         # Check for length
         if len(self.description) > self.desc_len:
             self.description = self.description[: self.desc_len]
             if self.desc_len >= 3:
-                self.description = self.description[:-3] + "..."
+                self.description = self.description[:-3] + '...'
 
             self.stop = True
-
-
-def get_description(
-    doctree: nodes.document,
-    description_length: int,
-    known_titles: Iterable[str] = None,
-    document: nodes.document = None,
-):
-    mcv = DescriptionParser(description_length, known_titles, document)
-    doctree.walkabout(mcv)
-    return mcv.description

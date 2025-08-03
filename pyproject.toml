@@ -1,0 +1,97 @@
+[build-system]
+requires = ["flit_core>=3.12"]
+build-backend = "flit_core.buildapi"
+
+# project metadata
+[project]
+name = "sphinxext-opengraph"
+description = "Sphinx Extension to enable OGP support"
+readme = "README.rst"
+urls.Code = "https://github.com/sphinx-doc/sphinxext-opengraph/"
+urls.Documentation = "https://sphinxext-opengraph.readthedocs.io/"
+urls.Download = "https://pypi.org/project/sphinxext-opengraph/"
+urls.Homepage = "https://github.com/sphinx-doc/sphinxext-opengraph/"
+urls."Issue tracker" = "https://github.com/sphinx-doc/sphinxext-opengraph/issues"
+license = "BSD-3-Clause"
+requires-python = ">=3.9"
+
+# Classifiers list: https://pypi.org/classifiers/
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Plugins",
+    "Environment :: Web Environment",
+    "Framework :: Sphinx :: Extension",
+    "Intended Audience :: Developers",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python",
+    "Topic :: Documentation :: Sphinx",
+    "Topic :: Documentation",
+    "Topic :: Software Development :: Documentation",
+    "Topic :: Text Processing",
+    "Topic :: Utilities",
+]
+dependencies = [
+    "Sphinx>=6.0",
+]
+dynamic = ["version"]
+
+[project.optional-dependencies]
+social_cards = [
+    "matplotlib>=3",
+]
+rtd = [
+    "furo>=2024",
+    "sphinx-design",
+    "sphinx~=8.1.0",
+]
+
+[[project.authors]]
+name = "Itay Ziv"
+email = "itay220204@gmail.com"
+
+[dependency-groups]
+docs = [
+    "furo>=2024",
+    "matplotlib",
+    "sphinx-design",
+    "sphinx~=8.1.0",
+]
+lint = [
+    "ruff==0.11.4",
+]
+package = [
+    "betterproto==2.0.0b6",  # resolution fails without betterproto
+    "build",
+    "pypi-attestations==0.0.22",
+    "twine>=6.1",
+]
+test = [
+    "pytest==7.4.4",
+    "beautifulsoup4==4.12.3",
+]
+
+[tool.flit.module]
+name = "sphinxext.opengraph"
+
+[tool.flit.sdist]
+include = [
+    # Documentation
+    "docs/",
+    # Resources
+    "sphinxext/opengraph/_static/",
+    # Tests
+    "tests/",
+    "noxfile.py",
+]
+exclude = [
+    "doc/_build",
+]
+
+[tool.uv]
+default-groups = "all"

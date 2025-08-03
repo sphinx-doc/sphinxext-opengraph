@@ -1,6 +1,8 @@
-extensions = ["sphinxext.opengraph"]
+from __future__ import annotations
 
-master_doc = "index"
-exclude_patterns = ["_build"]
+extensions = ['sphinxext.opengraph']
 
-html_theme = "basic"
+master_doc = 'index'
+exclude_patterns = ['_build']
+
+html_theme = 'basic'
