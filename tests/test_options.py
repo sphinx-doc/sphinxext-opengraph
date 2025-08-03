@@ -19,9 +19,9 @@ def get_tag_content(tags, tag_type, kind='property', prefix='og'):
     return get_tag(tags, tag_type, kind, prefix).get('content', '')
 
 
-def get_tag_content_text(tags, tag_type, kind="property", prefix="og"):
+def get_tag_content_text(tags, tag_type, kind='property', prefix='og'):
     # Gets the content of a specific ogp tag
-    return get_tag(tags, tag_type, kind, prefix).get_text("content", "")
+    return get_tag(tags, tag_type, kind, prefix).get_text('content', '')
 
 
 def get_meta_description(tags):
@@ -50,10 +50,10 @@ def test_meta_name_description(meta_tags):
     assert description == og_description
 
 
-@pytest.mark.sphinx("html", testroot="meta-name-description-escape")
-def test_meta_name_description(meta_tags):
-    og_description = get_tag_content(meta_tags, "description")
-    og_description_text = get_tag_content_text(meta_tags, "description")
+@pytest.mark.sphinx('html', testroot='meta-name-description-escape')
+def test_meta_name_description_escape(meta_tags):
+    og_description = get_tag_content(meta_tags, 'description')
+    og_description_text = get_tag_content_text(meta_tags, 'description')
 
     assert '<' in og_description
     assert '<' not in og_description_text
