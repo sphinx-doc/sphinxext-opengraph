@@ -74,7 +74,7 @@ class DescriptionParser(nodes.NodeVisitor):
             text = node.astext().replace("\r", "").replace("\n", " ").strip()
 
             # Ensure string contains HTML-safe characters
-            text = html.escape(text, True)
+            text = html.escape(text, quote=True)
 
             # Remove double spaces
             while text.find("  ") != -1:
