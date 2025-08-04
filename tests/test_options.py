@@ -42,6 +42,16 @@ def test_simple(og_meta_tags):
     )
 
 
+@pytest.mark.sphinx('epub', testroot='simple')
+def test_epub(content: Sphinx):
+    """Ogp tags are disabled for ePub build"""
+    meta_tags = conftest._meta_tags(content, target='index.xhtml')
+    og_meta_tags = [
+        tag for tag in meta_tags if tag.get('property', '').startswith('og:')
+    ]
+    assert len(og_meta_tags) == 0
+
+
 @pytest.mark.sphinx('html', testroot='meta-name-description')
 def test_meta_name_description(meta_tags):
     og_description = get_tag_content(meta_tags, 'description')

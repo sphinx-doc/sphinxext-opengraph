@@ -32,11 +32,11 @@ def content(app):
     return app
 
 
-def _meta_tags(content, subdir=None):
+def _meta_tags(content, subdir=None, target='index.html'):
     if subdir is None:
-        c = (content.outdir / 'index.html').read_text(encoding='utf-8')
+        c = (content.outdir / target).read_text(encoding='utf-8')
     else:
-        c = (content.outdir / subdir / 'index.html').read_text(encoding='utf-8')
+        c = (content.outdir / subdir / target).read_text(encoding='utf-8')
     return BeautifulSoup(c, 'html.parser').find_all('meta')
 
 
@@ -53,9 +53,7 @@ def meta_tags(content):
 
 @pytest.fixture
 def og_meta_tags(content):
-    return [
-        tag for tag in _meta_tags(content) if tag.get('property', '').startswith('og:')
-    ]
+    return _og_meta_tags(content)
 
 
 @pytest.fixture

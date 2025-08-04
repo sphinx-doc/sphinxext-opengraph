@@ -8,3 +8,7 @@ exclude_patterns = ['_build']
 html_theme = 'basic'
 
 ogp_site_url = 'http://example.org/en/latest/'
+
+# needed for ePub build
+epub_copyright = 'sphinxext.opengraph team'
+version = '1.0'
