@@ -60,6 +60,9 @@ def html_page_context(
     context: dict[str, Any],
     doctree: nodes.document,
 ) -> None:
+    if app.builder.name == 'epub':
+        return
+
     if doctree:
         context['metatags'] += get_tags(
             context,
