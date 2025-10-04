@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import dataclasses
+import functools
+import hashlib
+import logging
 import os
 import posixpath
 from pathlib import Path
@@ -18,7 +22,8 @@ except ImportError:
     NoneType = type(None)
 
 if TYPE_CHECKING:
-    from typing import Any
+    import io
+    from typing import Any, Callable
 
     from sphinx.application import Sphinx
     from sphinx.builders import Builder
@@ -26,22 +31,13 @@ if TYPE_CHECKING:
     from sphinx.environment import BuildEnvironment
     from sphinx.util.typing import ExtensionMetadata
 
-try:
-    from sphinxext.opengraph._social_cards import (
-        DEFAULT_SOCIAL_CONFIG,
-        create_social_card,
-    )
-except ImportError:
-    print('matplotlib is not installed, social cards will not be generated')
-    create_social_card = None
-    DEFAULT_SOCIAL_CONFIG = {}
 
 __version__ = '0.13.0'
 version_info = (0, 13, 0)
 
+LOGGER = logging.getLogger(__name__)
 DEFAULT_DESCRIPTION_LENGTH = 200
-DEFAULT_DESCRIPTION_LENGTH_SOCIAL_CARDS = 160
-DEFAULT_PAGE_LENGTH_SOCIAL_CARDS = 80
+
 
 # A selection from https://www.iana.org/assignments/media-types/media-types.xhtml#image
 IMAGE_MIME_TYPES = {
@@ -56,6 +52,39 @@ IMAGE_MIME_TYPES = {
     'heif': 'image/heif',
     'tiff': 'image/tiff',
 }
+
+
+@functools.cache
+def get_file_contents_hash(file_path: Path) -> str:
+    """Get a hash of the contents of a file."""
+    hasher = hashlib.sha1(usedforsecurity=False)
+    with file_path.open('rb') as f:
+        while chunk := f.read(8192):
+            hasher.update(chunk)
+    return hasher.hexdigest()[:8]
+
+
+@dataclasses.dataclass
+class SocialCardContents:
+    """Parameters for generating a social card.
+
+    Received by the `generate-social-card` event.
+    """
+
+    site_name: str
+    site_url: str
+    page_title: str
+    description: str
+    html_logo: Path | None
+    page_path: Path
+
+    @property
+    def signature(self) -> str:
+        """A string that uniquely identifies the contents of this social card.
+
+        Used to avoid regenerating cards unnecessarily.
+        """
+        return f'{self.site_name}{self.page_title}{self.description}{self.site_url}{get_file_contents_hash(self.html_logo) if self.html_logo else ""}'
 
 
 def html_page_context(
@@ -137,7 +166,7 @@ def get_tags(
     # site name tag, False disables, default to project if ogp_site_name not
     # set.
     if config.ogp_site_name is False:
-        site_name = None
+        site_name = ''
     elif config.ogp_site_name is None:
         site_name = config.project
     else:
@@ -166,30 +195,24 @@ def get_tags(
         ogp_use_first_image = config.ogp_use_first_image
         ogp_image_alt = fields.get('og:image:alt', config.ogp_image_alt)
 
-    # Decide whether to add social media card images for each page.
+    # Decide whether to generate a social media card image.
     # Only do this as a fallback if the user hasn't given any configuration
-    # to add other images.
-    config_social = DEFAULT_SOCIAL_CONFIG.copy()
-    social_card_user_options = config.ogp_social_cards or {}
-    config_social.update(social_card_user_options)
-    if (
-        not (image_url or ogp_use_first_image)
-        and config_social.get('enable') is not False
-        and create_social_card is not None
-    ):
-        image_url = social_card_for_page(
-            config_social=config_social,
+    # to add another image.
+
+    if not (image_url or ogp_use_first_image):
+        image_path = social_card_for_page(
+            app=builder.app,
             site_name=site_name,
-            title=title,
+            page_title=title,
             description=description,
-            pagename=context['pagename'],
-            ogp_site_url=ogp_site_url,
-            ogp_canonical_url=ogp_canonical_url,
-            srcdir=srcdir,
-            outdir=outdir,
+            page_path=Path(context['pagename']),
+            site_url=ogp_canonical_url,
             config=config,
-            env=env,
         )
+
+        if image_path:
+            image_url = posixpath.join(ogp_site_url, image_path.as_posix())
+
         ogp_use_first_image = False
 
         # Alt text is taken from description unless given
@@ -271,55 +294,108 @@ def ambient_site_url() -> str:
     )
 
 
+class CardAlreadyExistsError(Exception):
+    """Raised when a social card already exists."""
+
+    def __init__(self, path: Path) -> None:
+        self.path = path
+        super().__init__(f'Card already exists: {path}')
+
+
 def social_card_for_page(
-    config_social: dict[str, bool | str],
-    site_name: str,
-    title: str,
-    description: str,
-    pagename: str,
-    ogp_site_url: str,
-    ogp_canonical_url: str,
     *,
-    srcdir: str | Path,
-    outdir: str | Path,
+    app: Sphinx,
+    site_name: str,
+    page_title: str,
+    description: str,
+    page_path: Path,
     config: Config,
-    env: BuildEnvironment,
-) -> str:
-    # Description
-    description_max_length = config_social.get(
-        'description_max_length', DEFAULT_DESCRIPTION_LENGTH_SOCIAL_CARDS - 3
+    site_url: str,
+) -> Path | None:
+    contents = SocialCardContents(
+        site_name=site_name,
+        site_url=site_url.split('://')[-1],
+        page_title=page_title,
+        description=description,
+        page_path=page_path,
+        html_logo=(app.srcdir / Path(config.html_logo)) if config.html_logo else None,
     )
-    if len(description) > description_max_length:
-        description = description[:description_max_length].strip() + '...'
 
-    # Page title
-    pagetitle = title
-    if len(pagetitle) > DEFAULT_PAGE_LENGTH_SOCIAL_CARDS:
-        pagetitle = pagetitle[:DEFAULT_PAGE_LENGTH_SOCIAL_CARDS] + '...'
+    image_bytes: io.BytesIO
+    signature: str
 
-    # Site URL
-    site_url = config_social.get('site_url', True)
-    if site_url is True:
-        url_text = ogp_canonical_url.split('://')[-1]
-    elif isinstance(site_url, str):
-        url_text = site_url
+    outdir = Path(app.outdir)
 
-    # Plot an image with the given metadata to the output path
-    image_path = create_social_card(
-        config_social,
-        site_name,
-        pagetitle,
-        description,
-        url_text,
-        pagename,
-        srcdir=srcdir,
-        outdir=outdir,
-        env=env,
-        html_logo=config.html_logo,
-    )
+    # First callback to return a BytesIO object wins
+    try:
+        result = app.emit_firstresult(
+            'generate-social-card',
+            contents,
+            functools.partial(check_if_signature_exists, outdir, page_path),
+            allowed_exceptions=(CardAlreadyExistsError,),
+        )
+    except CardAlreadyExistsError as exc:
+        return exc.path
+
+    if result is None:
+        return None
+
+    image_bytes, signature = result
+
+    path_to_image = get_path_for_signature(page_path=page_path, signature=signature)
+
+    # Save the image to the output directory
+    absolute_path = outdir / path_to_image
+    absolute_path.parent.mkdir(exist_ok=True, parents=True)
+    absolute_path.write_bytes(image_bytes.getbuffer())
 
     # Link the image in our page metadata
-    return posixpath.join(ogp_site_url, image_path.as_posix())
+    return path_to_image
+
+
+def hash_str(data: str) -> str:
+    return hashlib.sha1(data.encode(), usedforsecurity=False).hexdigest()[:8]
+
+
+def get_path_for_signature(page_path: Path, signature: str) -> Path:
+    """Get a path for a social card image based on the page path and hash."""
+    return (
+        Path('_images')
+        / 'social_previews'
+        / f'summary_{str(page_path).replace("/", "_")}_{hash_str(signature)}.png'
+    )
+
+
+def check_if_signature_exists(outdir: Path, page_path: Path, signature: str) -> None:
+    """Check if a file with the given hash already exists.
+
+    This is used to avoid regenerating social cards unnecessarily.
+    """
+    relative_path = get_path_for_signature(page_path=page_path, signature=signature)
+    path = outdir / relative_path
+    if path.exists():
+        raise CardAlreadyExistsError(path=relative_path)
+
+
+def create_social_card_matplotlib_fallback(
+    app: Sphinx,
+    contents: SocialCardContents,
+    check_if_signature_exists: Callable[[str], None],
+) -> None | tuple[io.BytesIO, str]:
+    try:
+        from sphinxext.opengraph._social_cards_matplotlib import create_social_card
+    except ImportError as exc:
+        # Ideally we should raise and let people who don't want the card explicitly
+        # disable it, but this would be a breaking change.
+        LOGGER.warning(
+            'matplotlib is not installed, social cards will not be generated: %s', exc
+        )
+        return None
+
+    # Plot an image with the given metadata to the output path
+    return create_social_card(
+        app=app, contents=contents, check_if_signature_exists=check_if_signature_exists
+    )
 
 
 def make_tag(property: str, content: str, type_: str = 'property') -> str:
@@ -360,6 +436,17 @@ def setup(app: Sphinx) -> ExtensionMetadata:
 
     # Main Sphinx OpenGraph linking
     app.connect('html-page-context', html_page_context)
+
+    # Register event for customizing social card generation
+    app.add_event(name='generate-social-card')
+    # Add our matplotlib fallback, but with a low priority so that other
+    # extensions can override it.
+    # (default priority is 500, functions with lower priority numbers are called first).
+    app.connect(
+        'generate-social-card',
+        create_social_card_matplotlib_fallback,
+        priority=1000,
+    )
 
     return {
         'version': __version__,
