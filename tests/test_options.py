@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pathlib
 from typing import TYPE_CHECKING
 
 import conftest
@@ -119,7 +120,7 @@ def test_image_alt(og_meta_tags):
 
 
 @pytest.mark.sphinx('html', testroot='simple')
-def test_image_social_cards(meta_tags):
+def test_image_social_cards(content, meta_tags):
     """Social cards should automatically be added if no og:image is given."""
     pytest.importorskip('matplotlib')
     # Asserting `in` instead of `==` because of the hash that is generated
@@ -136,6 +137,39 @@ def test_image_social_cards(meta_tags):
     assert 'summary_large_image' in get_tag_content(
         meta_tags, 'card', kind='name', prefix='twitter'
     )
+    png_file = (
+        pathlib.Path(content.outdir)
+        / get_tag_content(meta_tags, 'image').split('/', 5)[-1]
+    )
+    assert png_file.is_file()
+    # https://en.wikipedia.org/wiki/List_of_file_signatures
+    assert png_file.read_bytes()[:8] == b'\x89PNG\r\n\x1a\n'
+    assert get_tag_content(meta_tags, 'image:width') == '1146'
+    assert get_tag_content(meta_tags, 'image:height') == '600'
+
+
+@pytest.mark.sphinx('html', testroot='custom-social-card-generation')
+def test_image_social_cards_custom(content, meta_tags):
+    """Providing a custom generation function for social cards."""
+    # Asserting `in` instead of `==` because of the hash that is generated
+    assert (
+        'http://example.org/en/latest/_images/social_previews/summary_index'
+        in get_tag_content(meta_tags, 'image')
+    )
+    # Make sure the extra tags are in the HTML
+    assert 'summary_large_image' in get_tag_content(
+        meta_tags, 'card', kind='name', prefix='twitter'
+    )
+    assert get_tag_content(meta_tags, 'image:width') == '1'
+    assert get_tag_content(meta_tags, 'image:height') == '1'
+    png_file = (
+        pathlib.Path(content.outdir)
+        / get_tag_content(meta_tags, 'image').split('/', 5)[-1]
+    )
+    assert png_file.is_file()
+    # https://en.wikipedia.org/wiki/List_of_file_signatures
+    assert png_file.read_bytes()[:8] == b'\x89PNG\r\n\x1a\n'
+    assert len(png_file.read_bytes()) == 95  # Size of the provided pixel.png
 
 
 @pytest.mark.sphinx('html', testroot='type')
