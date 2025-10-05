@@ -204,7 +204,7 @@ def get_tags(
             app=builder.app,
             site_name=site_name,
             page_title=title,
-            description=description,
+            description=fields.get('og:description', description),
             page_path=Path(context['pagename']),
             site_url=ogp_canonical_url,
             config=config,

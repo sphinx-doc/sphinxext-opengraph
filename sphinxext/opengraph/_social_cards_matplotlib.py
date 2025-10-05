@@ -71,7 +71,7 @@ class MatplotlibSocialCardSettings:
             values['image_mini'] = Path(values['image_mini'])
 
         if isinstance(values.get('site_url'), str):
-            values['override_site_url'] = values.get('site_url')
+            values['override_site_url'] = values.pop('site_url')
 
         return cls(**values)
 
