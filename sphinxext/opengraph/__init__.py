@@ -6,6 +6,7 @@ import hashlib
 import logging
 import os
 import posixpath
+import struct
 from pathlib import Path
 from typing import TYPE_CHECKING
 from urllib.parse import urljoin, urlparse, urlsplit, urlunsplit
@@ -62,6 +63,20 @@ def get_file_contents_hash(file_path: Path) -> str:
         while chunk := f.read(8192):
             hasher.update(chunk)
     return hasher.hexdigest()[:8]
+
+
+class PNGFormatError(Exception):
+    """Raised when a PNG file is invalid."""
+
+
+def get_png_dimensions(png_bytes: bytes) -> tuple[int, int]:
+    try:
+        w, h = struct.unpack('>LL', png_bytes[16:24])
+        width = int(w)
+        height = int(h)
+    except struct.error as exc:
+        raise PNGFormatError from exc
+    return width, height
 
 
 @dataclasses.dataclass
@@ -213,20 +228,22 @@ def get_tags(
         if image_path:
             image_url = posixpath.join(ogp_site_url, image_path.as_posix())
 
-        ogp_use_first_image = False
+            ogp_use_first_image = False
 
-        # Alt text is taken from description unless given
-        if 'og:image:alt' in fields:
-            ogp_image_alt = fields.get('og:image:alt')
-        else:
-            ogp_image_alt = description
+            # Alt text is taken from description unless given
+            if 'og:image:alt' in fields:
+                ogp_image_alt = fields.get('og:image:alt')
+            else:
+                ogp_image_alt = description
 
-        # If the social card objects have been added we add special metadata for them
-        # These are the dimensions *in pixels* of the card
-        # They were chosen by looking at the image pixel dimensions on disk
-        tags['og:image:width'] = '1146'
-        tags['og:image:height'] = '600'
-        meta_tags['twitter:card'] = 'summary_large_image'
+            try:
+                width, height = get_png_dimensions((outdir / image_path).read_bytes())
+            except PNGFormatError as exc:
+                LOGGER.warning('Could not get dimensions of social card: %s', exc)
+            else:
+                tags['og:image:width'] = f'{width}'
+                tags['og:image:height'] = f'{height}'
+            meta_tags['twitter:card'] = 'summary_large_image'
 
     fields.pop('og:image:alt', None)
 
