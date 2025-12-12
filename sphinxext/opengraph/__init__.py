@@ -146,13 +146,24 @@ def get_tags(
         tags['og:site_name'] = site_name
 
     # description tag
-    if description:
+    og_description = fields.get('og:description')
+    if og_description:
+        tags['og:description'] = og_description
+    if description and not og_description:
         tags['og:description'] = description
 
-        if config.ogp_enable_meta_description and not get_meta_description(
-            context['metatags']
-        ):
-            meta_tags['description'] = description
+    # Check for meta description override
+    meta_description_exists = get_meta_description(context['metatags'])
+    if og_description and not meta_description_exists:
+        meta_tags['description'] = og_description
+    elif (
+        config.ogp_enable_meta_description
+        and not meta_description_exists
+        and description
+        and not og_description
+        and getattr(config, 'ogp_copy_og_description_to_meta', False)
+    ):
+        meta_tags['description'] = description
 
     # image tag
     # Get basic values from config
@@ -356,6 +367,9 @@ def setup(app: Sphinx) -> ExtensionMetadata:
     )
     app.add_config_value(
         'ogp_enable_meta_description', True, 'html', types=frozenset({bool})
+    )
+    app.add_config_value(
+        'ogp_copy_og_description_to_meta', False, 'html', types=frozenset({bool})
     )
 
     # Main Sphinx OpenGraph linking
