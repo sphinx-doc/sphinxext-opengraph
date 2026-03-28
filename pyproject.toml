@@ -13,7 +13,7 @@ urls.Download = "https://pypi.org/project/sphinxext-opengraph/"
 urls.Homepage = "https://github.com/sphinx-doc/sphinxext-opengraph/"
 urls."Issue tracker" = "https://github.com/sphinx-doc/sphinxext-opengraph/issues"
 license = "BSD-3-Clause"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 
 # Classifiers list: https://pypi.org/classifiers/
 classifiers = [
@@ -24,7 +24,6 @@ classifiers = [
     "Intended Audience :: Developers",
     "Natural Language :: English",
     "Operating System :: OS Independent",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
