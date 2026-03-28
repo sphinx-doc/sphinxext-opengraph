@@ -48,7 +48,7 @@ class DescriptionParser(nodes.NodeVisitor):
             raise nodes.StopTraversal
 
         # Skip comments & all admonitions
-        if isinstance(node, (nodes.Admonition, nodes.Invisible)):
+        if isinstance(node, nodes.Admonition | nodes.Invisible):
             raise nodes.SkipNode
 
         # Mark start of nested lists

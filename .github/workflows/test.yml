@@ -36,7 +36,6 @@ jobs:
         os:
         - "ubuntu-latest"
         python:
-        - "3.9"
         - "3.10"
         - "3.11"
         - "3.12"
@@ -48,9 +47,10 @@ jobs:
         - "6"
         - "7"
         - "8"
+        - "9"
         exclude:
-        - python: "3.9"
-          sphinx-version: "8"
+        - python: "3.10"
+          sphinx-version: "9"
         include:
         - python: "3.13"
           sphinx-version: "8"
@@ -59,10 +59,10 @@ jobs:
           sphinx-version: "8"
           os: "macos-latest"
         - python: "3.14"
-          sphinx-version: "8"
+          sphinx-version: "9"
           os: "windows-latest"
         - python: "3.14"
-          sphinx-version: "8"
+          sphinx-version: "9"
           os: "macos-latest"
 
     steps:
