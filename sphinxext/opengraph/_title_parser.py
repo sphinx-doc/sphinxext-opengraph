@@ -8,7 +8,8 @@ def get_title(title: str) -> tuple[str, str]:
     htp.feed(title)
     htp.close()
 
-    return htp.text, htp.text_outside_tags
+    # An element with no text, like an icon, leaves the space that follows it.
+    return htp.text.strip(), htp.text_outside_tags.strip()
 
 
 class HTMLTextParser(HTMLParser):

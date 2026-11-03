@@ -193,6 +193,12 @@ def test_skip_admonitions(og_meta_tags):
     assert get_tag_content(og_meta_tags, 'description') == 'This is text.'
 
 
+@pytest.mark.sphinx('html', testroot='title-markup')
+def test_title_leading_markup(og_meta_tags):
+    # An element with no text, like an icon, leaves the space after it.
+    assert get_tag_content(og_meta_tags, 'title') == 'Lorem Ipsum'
+
+
 @pytest.mark.sphinx('html', testroot='skip-title')
 def test_skip_first_title(og_meta_tags):
     description = get_tag_content(og_meta_tags, 'description')
